@@ -33,6 +33,7 @@ var ServerBase = ClientBase.extend({
     var sql        = builder.toSql(builder);
     var bindings   = builder.getBindings();
 
+    logger.info('Running sql %s on domain: %s', sql, process.domain ? process.domain.id : 'unknown');
     var chain = this.getConnection(builder).then(function(connection) {
       if (client.isDebugging || builder.flags.debug) {
         client.debug(sql, bindings, connection, builder);
@@ -61,6 +62,7 @@ var ServerBase = ClientBase.extend({
           // into the connection pool.
           return;
         }
+        logger.info('Releasing connection on domain:', process.domain ? process.domain.id : 'unknown');
         client.pool.release(conn);
       });
     }
@@ -87,18 +89,21 @@ var ServerBase = ClientBase.extend({
   // returning a promise.
   getConnection: function(builder) {
     if (builder && builder.usingConnection) return Promise.fulfilled(builder.usingConnection);
+    logger.info('Acquiring connection on domain:', process.domain ? process.domain.id : 'unknown');
     return Promise.promisify(this.pool.acquire, this.pool)();
   },
 
   // Releases a connection from the connection pool,
   // returning a promise.
   releaseConnection: function(conn) {
+    logger.info('Releasing connection on domain:', process.domain ? process.domain.id : 'unknown');
     return Promise.promisify(this.pool.release)(conn);
   },
 
   // Begins a transaction statement on the instance,
   // resolving with the connection of the current transaction.
   startTransaction: function() {
+    logger.info('Starting transaction on domain:', process.domain ? process.domain.id : 'unknown');
     return this.getConnection()
       .tap(function(connection) {
         return Promise.promisify(connection.query, connection)('begin;', []);
@@ -109,6 +114,7 @@ var ServerBase = ClientBase.extend({
   finishTransaction: function(type, transaction, msg) {
     var client = this;
     var dfd    = transaction.dfd;
+    logger.info('End Transaction:', process.domain ? process.domain.id : 'unknown');
     Promise.promisify(transaction.connection.query, transaction.connection)(type + ';', []).then(function(resp) {
       if (type === 'commit') dfd.fulfill(msg || resp);
       if (type === 'rollback') dfd.reject(msg || resp);
