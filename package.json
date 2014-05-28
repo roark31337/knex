@@ -23,7 +23,7 @@
     "sinon-chai": "~2.4.0"
   },
   "dependencies": {
-    "generic-pool-redux": "~0.1.0",
+    "generic-pool-redux": "git+https://github.com/bookshelf/generic-pool-redux.git#606be1f65aaf7b4b87e88222aa03e655240127fd",
     "optimist": "~0.6.0",
     "mkdirp": "~0.3.5",
     "bluebird": ">=1.0.0",
