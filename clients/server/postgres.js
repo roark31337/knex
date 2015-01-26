@@ -6,6 +6,7 @@
 // using this database.
 var _    = require('lodash');
 var pg   = null;
+var EventEmitter = require('events').EventEmitter;
 
 try {
   pg = require('pg');
@@ -22,7 +23,7 @@ var grammar           = require('./postgres/grammar').grammar;
 var schemaGrammar     = require('./postgres/schemagrammar').schemaGrammar;
 
 // Constructor for the PostgreSQL Client
-exports.Client = ServerBase.extend({
+exports.Client = ServerBase.extend(_.extend({
 
   dialect: 'postgresql',
 
@@ -35,6 +36,8 @@ exports.Client = ServerBase.extend({
   // Runs the query on the specified connection, providing the bindings
   // and any other necessary prep work.
   runQuery: function(connection, sql, bindings, builder) {
+    var startTime = new Date();
+    var self = this;
     if (!connection) throw new Error('No database connection exists for the query');
     var questionCount = 0;
     sql = sql.replace(/\?/g, function() {
@@ -42,7 +45,12 @@ exports.Client = ServerBase.extend({
       return '$' + questionCount;
     });
     if (builder && builder.flags.options) sql = _.extend({text: sql}, builder.flags.options);
-    return Promise.promisify(connection.query, connection)(sql, bindings);
+    return Promise.promisify(connection.query, connection)(sql, bindings).tap(function() {
+      var totalTime = new Date() - startTime;
+      var table = builder ? builder.table : '';
+      var type = builder ? builder.type : '';
+      self.emit('QueryTime', { table: table, type: type, sql: sql, time: totalTime });
+    });
   },
 
   // Get a raw connection, called by the `pool` whenever a new
@@ -69,4 +77,4 @@ exports.Client = ServerBase.extend({
     });
   }
 
-});
+}, EventEmitter.prototype));
